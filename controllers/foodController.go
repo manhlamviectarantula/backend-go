@@ -6,6 +6,7 @@ import (
 	"log"
 	"movie-ticket-booking/database"
 	"movie-ticket-booking/models"
+	"movie-ticket-booking/services"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -99,51 +100,57 @@ func UpdateFood(c *gin.Context) {
 }
 
 func AddFoodOfBranch(c *gin.Context) {
-
-	// Lấy BranchID từ URL và chuyển sang số nguyên
+	// Chuyển BranchID từ string sang int
 	branchID, err := strconv.Atoi(c.Param("BranchID"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid BranchID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "BranchID không hợp lệ"})
 		return
 	}
 
-	// Xử lý upload file
+	// Lấy file ảnh
 	imageFile, err := c.FormFile("Image")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File ảnh không hợp lệ hoặc chưa được gửi lên"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ảnh là bắt buộc"})
 		return
 	}
 
-	filePath := "upload/" + imageFile.Filename
-	if err := c.SaveUploadedFile(imageFile, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Lưu file poster thất bại"})
+	// Upload lên Cloudinary
+	imageURL, err := services.UploadToCloudinary(imageFile, "foods")
+	if err != nil {
+		log.Println("Upload Cloudinary error:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload ảnh thất bại"})
 		return
 	}
 
-	priceStr := c.Request.FormValue("Price")
+	if imageURL == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload ảnh thất bại, URL rỗng"})
+		return
+	}
+
+	// Chuyển Price sang int
+	priceStr := c.PostForm("Price")
 	price, err := strconv.Atoi(priceStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "price phải là một số nguyên"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Price phải là số nguyên"})
 		return
 	}
 
 	food := models.Food{
 		BranchID:      branchID,
-		FoodName:      c.Request.FormValue("FoodName"),
-		Image:         filePath,
-		Description:   c.Request.FormValue("Description"),
+		FoodName:      c.PostForm("FoodName"),
+		Image:         imageURL, // dùng URL từ Cloudinary
+		Description:   c.PostForm("Description"),
 		Price:         price,
-		CreatedBy:     c.Request.FormValue("CreatedBy"),
-		LastUpdatedBy: c.Request.FormValue("LastUpdatedBy"),
+		CreatedBy:     c.PostForm("CreatedBy"),
+		LastUpdatedBy: c.PostForm("LastUpdatedBy"),
 	}
 
 	// Thêm món ăn vào database
 	if err := database.DB.Create(&food).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Tạo food thất bại"})
 		return
 	}
 
-	// Trả về phản hồi thành công
 	c.JSON(http.StatusCreated, gin.H{"message": "Food added successfully", "data": food})
 }
 

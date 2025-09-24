@@ -53,38 +53,6 @@ func GetGoogleConfig() *oauth2.Config {
 	}
 }
 
-// type SendMailConfig struct {
-// 	From     string
-// 	Password string
-// 	Host     string
-// 	Port     int
-// }
-
-//	func GetSendMailConfig() *SendMailConfig {
-//		port, _ := strconv.Atoi(GetEnv("EMAIL_SMTP_PORT", "587"))
-//		return &SendMailConfig{
-//			From:     GetEnv("EMAIL_FROM", ""),
-//			Password: GetEnv("EMAIL_PASSWORD", ""),
-//			Host:     GetEnv("EMAIL_SMTP_HOST", "smtp.gmail.com"),
-//			Port:     port,
-//		}
-//	}
-//
-
-// cấu hình gửi mail cho SendGrid
-type SendMailConfig struct {
-	From   string
-	APIKey string
-}
-
-// GetSendMailConfig đọc từ .env
-func GetSendMailConfig() *SendMailConfig {
-	return &SendMailConfig{
-		From:   GetEnv("EMAIL_FROM", ""),
-		APIKey: GetEnv("SENDGRID_API_KEY", ""),
-	}
-}
-
 func GetMomoEnv() map[string]string {
 	return map[string]string{
 		"PARTNER_CODE": GetEnv("MOMO_PARTNER_CODE", ""),
@@ -92,6 +60,18 @@ func GetMomoEnv() map[string]string {
 		"SECRET_KEY":   GetEnv("MOMO_SECRET_KEY", ""),
 		"REDIRECT_URL": GetEnv("MOMO_REDIRECT_URL", ""),
 		"IPN_URL":      GetEnv("MOMO_IPN_URL", ""),
+	}
+}
+
+type SendMailConfig struct {
+	From   string
+	APIKey string
+}
+
+func GetSendMailConfig() *SendMailConfig {
+	return &SendMailConfig{
+		From:   GetEnv("EMAIL_FROM", ""),
+		APIKey: GetEnv("SENDGRID_API_KEY", ""),
 	}
 }
 
@@ -106,5 +86,19 @@ func GetAIConfig() *AIConfig {
 		APIKey:  GetEnv("AI_API_KEY", ""),
 		BaseURL: GetEnv("AI_BASE_URL", ""),
 		Model:   GetEnv("AI_MODEL", ""),
+	}
+}
+
+type CloudinaryConfig struct {
+	Name      string
+	APIKEY    string
+	APISECRET string
+}
+
+func GetCloudinaryConfig() *CloudinaryConfig {
+	return &CloudinaryConfig{
+		Name:      GetEnv("CLOUDINARY_CLOUD_NAME", ""),
+		APIKEY:    GetEnv("CLOUDINARY_API_KEY", ""),
+		APISECRET: GetEnv("CLOUDINARY_API_SECRET", ""),
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"log"
 	"movie-ticket-booking/database"
 	"movie-ticket-booking/models"
+	"movie-ticket-booking/services"
 	"net/http"
 	"strconv"
 
@@ -38,58 +39,58 @@ func GetMoviesInAddShowtime(c *gin.Context) {
 }
 
 func AddMovie(c *gin.Context) {
-	// Xử lý upload file
 	posterFile, err := c.FormFile("Poster")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Poster là bắt buộc"})
 		return
 	}
 
-	filePath := "upload/" + posterFile.Filename
-	if err := c.SaveUploadedFile(posterFile, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Lưu file poster thất bại"})
+	posterURL, err := services.UploadToCloudinary(posterFile, "movies")
+	if err != nil {
+		log.Println("Upload Cloudinary error:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload poster thất bại"})
 		return
 	}
 
-	// Chuyển đổi Duration thành int
-	durationStr := c.Request.FormValue("Duration")
+	if posterURL == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload poster thất bại, URL rỗng"})
+		return
+	}
+
+	durationStr := c.PostForm("Duration")
 	duration, err := strconv.Atoi(durationStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Duration phải là một số nguyên"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Duration phải là số nguyên"})
 		return
 	}
 
-	// Chuyển đổi Rating thành float
-	ratingStr := c.Request.FormValue("Rating")
+	ratingStr := c.PostForm("Rating")
 	rating, err := strconv.ParseFloat(ratingStr, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Rating phải là một số thập phân"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Rating phải là số thập phân"})
 		return
 	}
 
-	// Lấy các trường dữ liệu từ form
 	movie := models.Movie{
-		MovieName:      c.Request.FormValue("MovieName"),
-		Slug:           c.Request.FormValue("Slug"),
-		AgeTag:         c.Request.FormValue("AgeTag"),
+		MovieName:      c.PostForm("MovieName"),
+		Slug:           c.PostForm("Slug"),
+		AgeTag:         c.PostForm("AgeTag"),
 		Duration:       duration,
-		ReleaseDate:    c.Request.FormValue("ReleaseDate"),
-		LastScreenDate: c.Request.FormValue("LastScreenDate"),
-		Poster:         filePath,
-		Trailer:        c.Request.FormValue("Trailer"),
-		Rating:         rating, // Đã chuyển đổi thành float64
-		Description:    c.Request.FormValue("Description"),
-		CreatedBy:      c.Request.FormValue("CreatedBy"),
-		LastUpdatedBy:  c.Request.FormValue("LastUpdatedBy"),
+		ReleaseDate:    c.PostForm("ReleaseDate"),
+		LastScreenDate: c.PostForm("LastScreenDate"),
+		Poster:         posterURL,
+		Trailer:        c.PostForm("Trailer"),
+		Rating:         rating,
+		Description:    c.PostForm("Description"),
+		CreatedBy:      c.PostForm("CreatedBy"),
+		LastUpdatedBy:  c.PostForm("LastUpdatedBy"),
 	}
 
-	// Lưu bản ghi movie vào cơ sở dữ liệu
 	if err := database.DB.Create(&movie).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Tạo movie thất bại"})
 		return
 	}
 
-	// Trả về phản hồi thành công
 	c.JSON(http.StatusCreated, gin.H{"data": movie})
 }
 

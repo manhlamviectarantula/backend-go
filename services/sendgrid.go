@@ -11,10 +11,7 @@ import (
 
 // Gửi OTP
 func SendMailReceiveTicket(to, code string) error {
-
 	cfg := config.GetSendMailConfig()
-
-	fmt.Println("API Key:", cfg.APIKey)
 
 	from := mail.NewEmail("", cfg.From)
 	subject := "Xác thực email nhận vé từ CINEMA"
