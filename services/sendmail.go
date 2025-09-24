@@ -1,57 +1,66 @@
 package services
 
 import (
+	"encoding/base64"
 	"fmt"
 	"movie-ticket-booking/config"
-	"os"
 
-	"gopkg.in/gomail.v2"
+	"github.com/sendgrid/sendgrid-go"
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
+// Gửi OTP
 func SendMailReceiveTicket(to, code string) error {
-	cfg := config.GetSendMailConfig()
-	m := gomail.NewMessage()
-	m.SetHeader("From", cfg.From)
-	m.SetHeader("To", to)
-	m.SetHeader("Subject", "Xác thực email")
-	m.SetBody("text/plain", fmt.Sprintf("Mã OTP: %s", code))
 
-	d := gomail.NewDialer(cfg.Host, cfg.Port, cfg.From, cfg.Password)
-	return d.DialAndSend(m)
+	cfg := config.GetSendMailConfig()
+
+	fmt.Println("API Key:", cfg.APIKey)
+
+	from := mail.NewEmail("", cfg.From)
+	subject := "Xác thực email nhận vé từ CINEMA"
+	toEmail := mail.NewEmail("", to)
+	body := fmt.Sprintf("Mã OTP của bạn là: %s", code)
+
+	message := mail.NewSingleEmail(from, subject, toEmail, body, body)
+	client := sendgrid.NewSendClient(cfg.APIKey)
+	_, err := client.Send(message)
+	return err
 }
 
+// Gửi mật khẩu mới
 func SendNewPasswordEmail(to, newPassword string) error {
 	cfg := config.GetSendMailConfig()
 
-	m := gomail.NewMessage()
-	m.SetHeader("From", cfg.From)
-	m.SetHeader("To", to)
-	m.SetHeader("Subject", "Khôi phục mật khẩu từ CINÉMÀ")
-	m.SetBody("text/plain", fmt.Sprintf("Mật khẩu mới của bạn là: %s", newPassword))
+	from := mail.NewEmail("", cfg.From)
+	subject := "Khôi phục mật khẩu CINEMA"
+	toEmail := mail.NewEmail("", to)
+	body := fmt.Sprintf("Mật khẩu mới của bạn là: %s", newPassword)
 
-	d := gomail.NewDialer(cfg.Host, cfg.Port, cfg.From, cfg.Password)
-	return d.DialAndSend(m)
+	message := mail.NewSingleEmail(from, subject, toEmail, body, body)
+	client := sendgrid.NewSendClient(cfg.APIKey)
+	_, err := client.Send(message)
+	return err
 }
 
+// Gửi hóa đơn / invoice kèm QR code inline
 func SendInvoice(to, subject, body string, imageData []byte, cid string) error {
 	cfg := config.GetSendMailConfig()
 
-	m := gomail.NewMessage()
-	m.SetHeader("From", cfg.From)
-	m.SetHeader("To", to)
-	m.SetHeader("Subject", subject)
-	m.SetBody("text/html", body)
+	from := mail.NewEmail("", cfg.From)
+	toEmail := mail.NewEmail("", to)
+	message := mail.NewSingleEmail(from, subject, toEmail, body, body)
 
-	// Ghi ảnh QR ra file tạm
-	tmpFile := "tmp_qr.png"
-	if err := os.WriteFile(tmpFile, imageData, 0644); err != nil {
-		return err
-	}
-	defer os.Remove(tmpFile)
+	// Thêm inline attachment (QR code)
+	attachment := mail.NewAttachment()
+	encoded := base64.StdEncoding.EncodeToString(imageData)
+	attachment.SetContent(encoded)
+	attachment.SetType("image/png")
+	attachment.SetFilename("qr.png")
+	attachment.SetDisposition("inline")
+	attachment.SetContentID(cid)
+	message.AddAttachment(attachment)
 
-	// Nhúng ảnh vào email với cid
-	m.Embed(tmpFile)
-
-	d := gomail.NewDialer(cfg.Host, cfg.Port, cfg.From, cfg.Password)
-	return d.DialAndSend(m)
+	client := sendgrid.NewSendClient(cfg.APIKey)
+	_, err := client.Send(message)
+	return err
 }

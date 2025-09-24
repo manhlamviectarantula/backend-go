@@ -3,7 +3,6 @@ package config
 import (
 	"log"
 	"os"
-	"strconv"
 
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
@@ -54,20 +53,35 @@ func GetGoogleConfig() *oauth2.Config {
 	}
 }
 
+// type SendMailConfig struct {
+// 	From     string
+// 	Password string
+// 	Host     string
+// 	Port     int
+// }
+
+//	func GetSendMailConfig() *SendMailConfig {
+//		port, _ := strconv.Atoi(GetEnv("EMAIL_SMTP_PORT", "587"))
+//		return &SendMailConfig{
+//			From:     GetEnv("EMAIL_FROM", ""),
+//			Password: GetEnv("EMAIL_PASSWORD", ""),
+//			Host:     GetEnv("EMAIL_SMTP_HOST", "smtp.gmail.com"),
+//			Port:     port,
+//		}
+//	}
+//
+
+// cấu hình gửi mail cho SendGrid
 type SendMailConfig struct {
-	From     string
-	Password string
-	Host     string
-	Port     int
+	From   string
+	APIKey string
 }
 
+// GetSendMailConfig đọc từ .env
 func GetSendMailConfig() *SendMailConfig {
-	port, _ := strconv.Atoi(GetEnv("EMAIL_SMTP_PORT", "587"))
 	return &SendMailConfig{
-		From:     GetEnv("EMAIL_FROM", ""),
-		Password: GetEnv("EMAIL_PASSWORD", ""),
-		Host:     GetEnv("EMAIL_SMTP_HOST", "smtp.gmail.com"),
-		Port:     port,
+		From:   GetEnv("EMAIL_FROM", ""),
+		APIKey: GetEnv("SENDGRID_API_KEY", ""),
 	}
 }
 

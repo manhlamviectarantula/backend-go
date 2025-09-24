@@ -22,6 +22,5 @@ func AuthRoutes(router *gin.Engine) {
 
 		authGroup.POST("/request-otp/:email", controllers.RequestOTP)
 		authGroup.POST("/verify-otp", controllers.VerifyOTP)
-
 	}
 }
