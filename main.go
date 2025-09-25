@@ -36,9 +36,6 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// Static folder
-	router.Static("/upload", "./upload")
-
 	// Tích hợp socket.io
 	router.GET("/socket.io/*any", gin.WrapH(socketServer))
 	router.POST("/socket.io/*any", gin.WrapH(socketServer))

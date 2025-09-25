@@ -7,6 +7,7 @@ import (
 	"movie-ticket-booking/services"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -51,12 +52,12 @@ func AddMovie(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload poster thất bại"})
 		return
 	}
-
 	if posterURL == "" {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload poster thất bại, URL rỗng"})
 		return
 	}
 
+	// Parse Duration
 	durationStr := c.PostForm("Duration")
 	duration, err := strconv.Atoi(durationStr)
 	if err != nil {
@@ -64,6 +65,7 @@ func AddMovie(c *gin.Context) {
 		return
 	}
 
+	// Parse Rating
 	ratingStr := c.PostForm("Rating")
 	rating, err := strconv.ParseFloat(ratingStr, 64)
 	if err != nil {
@@ -71,19 +73,46 @@ func AddMovie(c *gin.Context) {
 		return
 	}
 
+	// Parse ngày (định dạng yyyy-mm-dd, ví dụ "2025-10-01")
+	layout := "2006-01-02"
+	releaseDateStr := c.PostForm("ReleaseDate")
+	lastScreenDateStr := c.PostForm("LastScreenDate")
+
+	releaseDate, err := time.Parse(layout, releaseDateStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ReleaseDate không hợp lệ (yyyy-mm-dd)"})
+		return
+	}
+
+	lastScreenDate, err := time.Parse(layout, lastScreenDateStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "LastScreenDate không hợp lệ (yyyy-mm-dd)"})
+		return
+	}
+
+	// Xác định Status
+	today := time.Now()
+	status := 0 // mặc định: sắp chiếu
+	if !today.Before(releaseDate) && !today.After(lastScreenDate) {
+		status = 1 // đang chiếu
+	} else if today.After(lastScreenDate) {
+		status = 2 // đã ngừng chiếu (tuỳ bạn có muốn phân loại thêm không)
+	}
+
 	movie := models.Movie{
 		MovieName:      c.PostForm("MovieName"),
 		Slug:           c.PostForm("Slug"),
 		AgeTag:         c.PostForm("AgeTag"),
 		Duration:       duration,
-		ReleaseDate:    c.PostForm("ReleaseDate"),
-		LastScreenDate: c.PostForm("LastScreenDate"),
+		ReleaseDate:    releaseDateStr,
+		LastScreenDate: lastScreenDateStr,
 		Poster:         posterURL,
 		Trailer:        c.PostForm("Trailer"),
 		Rating:         rating,
 		Description:    c.PostForm("Description"),
 		CreatedBy:      c.PostForm("CreatedBy"),
 		LastUpdatedBy:  c.PostForm("LastUpdatedBy"),
+		Status:         status, // thêm field Status
 	}
 
 	if err := database.DB.Create(&movie).Error; err != nil {

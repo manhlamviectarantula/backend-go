@@ -7,6 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// BỎ - KO TÍCH HỢP ĐƯỢC BROADCAST CỦA SOCKET GOLANG
+
 func MessageRoutes(router *gin.Engine) {
 	messageGroup := router.Group("/message")
 	{

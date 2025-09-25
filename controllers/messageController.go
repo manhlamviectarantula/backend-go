@@ -10,6 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// BỎ - KO TÍCH HỢP ĐƯỢC BROADCAST CỦA SOCKET GOLANG
+
 func SendMessage(c *gin.Context) {
 	senderIDRaw, exists := c.Get("AccountID")
 	if !exists {
