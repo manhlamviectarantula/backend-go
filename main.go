@@ -6,6 +6,7 @@ import (
 	"movie-ticket-booking/database"
 	"movie-ticket-booking/routes"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gin-contrib/cors"
@@ -15,6 +16,25 @@ import (
 func main() {
 	config.LoadEnv()
 	database.Connect()
+
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "cron-update-movies":
+			UpdateMovies()
+		case "cron-unlock-seats":
+			AutoUnlockSeats()
+		case "cron-daily-movies":
+			DailyUpdateMovies()
+		case "cron-close-showtimes":
+			AutoCloseShowtimes()
+		case "cron-all": // chạy tất cả cron liên tục
+			c := SetupCronJobs()
+			c.Start()
+			defer c.Stop()
+			select {} // giữ process chạy
+		}
+		return
+	}
 
 	// Tạo socket server
 	socketServer := InitSocket()
