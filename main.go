@@ -76,6 +76,7 @@ func main() {
 	routes.MessageRoutes(router)
 	routes.AdminDashboardRoutes(router)
 	routes.ChatbotRoutes(router)
+	routes.CronjobRoutes(router)
 
 	port := config.GetEnv("PORT", "8080")
 	log.Println("✅ Server đang chạy tại cổng " + port + "...")

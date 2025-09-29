@@ -9,19 +9,6 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-// Task 1: Cập nhật trạng thái phim
-func UpdateMovies() {
-	log.Println("🎬 Running UpdateMovies...")
-	database.DB.Exec(`
-        UPDATE movies
-        SET Status = CASE
-            WHEN Status = 0 AND ReleaseDate <= CURDATE() THEN 1
-            WHEN Status != 2 AND LastScreenDate < CURDATE() THEN 2
-            ELSE Status
-        END
-    `)
-}
-
 // Task 2: Unlock seat hết hạn
 func AutoUnlockSeats() {
 	cutoff := time.Now().Add(-3 * time.Minute)
@@ -88,7 +75,6 @@ func AutoCloseShowtimes() {
 func SetupCronJobs() *cron.Cron {
 	c := cron.New()
 
-	c.AddFunc("@daily", UpdateMovies)
 	c.AddFunc("@every 2m", AutoUnlockSeats)
 	c.AddFunc("@daily", DailyUpdateMovies)
 	c.AddFunc("@every 1m", AutoCloseShowtimes)
