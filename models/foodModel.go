@@ -9,6 +9,7 @@ type Food struct {
 	Image         string    `gorm:"column:Image;size:100;not null"`
 	Description   string    `gorm:"column:Description;size:255;not null"`
 	Price         int       `gorm:"column:Price;not null"`
+	Status        bool      `gorm:"column:Status;not null;default:true"`
 	CreatedAt     time.Time `gorm:"column:CreatedAt;autoCreateTime"`
 	LastUpdatedAt time.Time `gorm:"column:LastUpdatedAt;autoUpdateTime"`
 	CreatedBy     string    `gorm:"column:CreatedBy;size:100;not null"`

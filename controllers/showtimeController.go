@@ -227,6 +227,17 @@ func AddShowtime(c *gin.Context) {
 		return
 	}
 
+	var theater models.Theater
+	if err := database.DB.First(&theater, request.TheaterID).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Không tìm thấy rạp"})
+		return
+	}
+	if !theater.Status {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Rạp đã bị khóa, không thể thêm suất chiếu"})
+		return
+	}
+	branchID := theater.BranchID
+
 	// ✅ Parse ngày suất chiếu
 	dateLayout := "2006-01-02"
 	showDate, err := time.Parse(dateLayout, request.ShowDate)
@@ -327,14 +338,6 @@ func AddShowtime(c *gin.Context) {
 			return
 		}
 	}
-
-	// ✅ Lấy branchId từ Theater
-	var theater models.Theater
-	if err := database.DB.First(&theater, request.TheaterID).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Không tìm thấy rạp"})
-		return
-	}
-	branchID := theater.BranchID
 
 	// ✅ Lấy tất cả suất chiếu cùng ngày & cùng branch & cùng phim
 	var sameMovieShowtimes []struct {

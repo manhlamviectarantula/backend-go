@@ -185,3 +185,30 @@ func AddTheater(c *gin.Context) {
 	// Return success response
 	c.JSON(http.StatusCreated, gin.H{"data": theater})
 }
+
+func ChangeTheaterStatus(c *gin.Context) {
+	// Lấy TheaterID từ param
+	theaterID := c.Param("TheaterID")
+
+	var theater models.Theater
+	// Kiểm tra theater có tồn tại không
+	if err := database.DB.First(&theater, "TheaterID = ?", theaterID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Theater not found"})
+		return
+	}
+
+	// Đảo trạng thái hiện tại
+	theater.Status = !theater.Status
+	theater.LastUpdatedAt = time.Now()
+
+	// Lưu lại database
+	if err := database.DB.Save(&theater).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update theater status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"TheaterID": theater.TheaterID,
+		"Status":    theater.Status,
+	})
+}

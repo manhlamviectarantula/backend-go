@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"math"
 	"movie-ticket-booking/database"
 	"movie-ticket-booking/models"
 	"movie-ticket-booking/services"
@@ -68,47 +69,70 @@ func FindAccountByID(accountID int) (map[string]interface{}, error) {
 	}, nil
 }
 
+type AccountResponse struct {
+	AccountID       int    `json:"AccountID"`
+	Email           string `json:"Email"`
+	PhoneNumber     string `json:"PhoneNumber"`
+	FullName        string `json:"FullName"`
+	BirthDate       string `json:"BirthDate"`
+	Status          bool   `json:"Status"`
+	CreatedAt       string `json:"CreatedAt"`
+	LastUpdatedAt   string `json:"LastUpdatedAt"`
+	AccountTypeID   int    `json:"AccountTypeID"`
+	AccountTypeName string `json:"AccountTypeName"`
+	BranchName      string `json:"BranchName"`
+}
+
 func GetAllAccounts(c *gin.Context) {
-	var accounts []struct {
-		AccountID       int
-		Email           string
-		PhoneNumber     string
-		FullName        string
-		BirthDate       string
-		Status          int
-		CreatedAt       time.Time
-		LastUpdatedAt   time.Time
-		AccountTypeID   int
-		AccountTypeName string
-		BranchName      string
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "7"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 10
+	}
+	offset := (page - 1) * limit
+
+	var total int64
+	if err := database.DB.Model(&models.Account{}).Where("AccountTypeID != ?", 3).Count(&total).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count accounts"})
+		return
 	}
 
-	query := `
-SELECT 
-	a.AccountID, 
-	a.Email, 
-	a.PhoneNumber, 
-	a.FullName, 
-	a.BirthDate, 
-	a.Status, 
-	a.CreatedAt, 
-	a.LastUpdatedAt, 
-	a.AccountTypeID,
-	at.AccountTypeName,
-	COALESCE(b.BranchName, 'Không có') AS BranchName
-FROM accounts a
-JOIN account_types at ON a.AccountTypeID = at.AccountTypeID
-LEFT JOIN branches b ON a.BranchID = b.BranchID
-`
-
-	// Thực thi truy vấn SQL thô với GORM
-	if err := database.DB.Raw(query).Scan(&accounts).Error; err != nil {
+	// Lấy data với join trực tiếp
+	var accounts []AccountResponse
+	if err := database.DB.Table("accounts a").
+		Select(`
+			a.AccountID, 
+			a.Email, 
+			a.PhoneNumber, 
+			a.FullName, 
+			a.BirthDate, 
+			a.Status, 
+			a.CreatedAt, 
+			a.LastUpdatedAt, 
+			a.AccountTypeID,
+			at.AccountTypeName,
+			COALESCE(b.BranchName, '') AS BranchName
+		`).
+		Joins("JOIN account_types at ON a.AccountTypeID = at.AccountTypeID").
+		Joins("LEFT JOIN branches b ON a.BranchID = b.BranchID").
+		Where("a.AccountTypeID != ?", 3).
+		Order("a.CreatedAt DESC").
+		Limit(limit).Offset(offset).
+		Scan(&accounts).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch accounts"})
 		return
 	}
 
-	// Trả về danh sách tài khoản
-	c.JSON(http.StatusOK, gin.H{"data": accounts})
+	c.JSON(http.StatusOK, gin.H{
+		"data":       accounts,
+		"total":      total,
+		"page":       page,
+		"limit":      limit,
+		"totalPages": int(math.Ceil(float64(total) / float64(limit))),
+	})
 }
 
 func BlockAccount(c *gin.Context) {
