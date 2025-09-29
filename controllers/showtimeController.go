@@ -3,6 +3,7 @@ package controllers
 import (
 	"errors"
 	"fmt"
+	"log"
 	"movie-ticket-booking/database"
 	"movie-ticket-booking/models"
 	"net/http"
@@ -551,4 +552,29 @@ func DeleteShowtime(c *gin.Context) {
 
 	// Return success response
 	c.JSON(http.StatusOK, gin.H{"message": "Showtime deleted successfully"})
+}
+
+func TestCron(c *gin.Context) {
+	now := time.Now()
+	today := now.Format("2006-01-02")
+	currentTime := now.Format("15:04")
+
+	result := database.DB.Model(&models.Showtime{}).
+		Where("Status = 1").
+		Where("IsOpenOrder = ?", true).
+		Where("(ShowDate < ?) OR (ShowDate = ? AND StartTime < ?)", today, today, currentTime).
+		Update("Status", 0)
+
+	if result.Error != nil {
+		log.Printf("[AutoCloseShowtimes] error updating showtimes: %v", result.Error)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": result.Error.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "Auto close showtimes executed",
+		"rows_affected": result.RowsAffected,
+	})
 }

@@ -19,5 +19,8 @@ func ShowtimeRoutes(router *gin.Engine) {
 
 		showtimeGroup.GET("/get-showtimes-of-date/:MovieID", controllers.GetAllShowtimesOfDate)
 		showtimeGroup.GET("/get-showtimes-info-in-selectSeat/:ShowtimeID", controllers.GetShowtimeInfo)
+
+		showtimeGroup.PUT("/test-cron", controllers.TestCron)
+
 	}
 }
