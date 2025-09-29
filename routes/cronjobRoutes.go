@@ -9,9 +9,9 @@ import (
 func CronjobRoutes(router *gin.Engine) {
 	cronjobGroup := router.Group("/cronjob")
 	{
-		// cronjobGroup.PUT("/update-movie-status", middleware.RequireLogin, controllers.GetFoodsOfBranch)
-		cronjobGroup.PUT("/update-movie-status", services.DailyUpdateMoviesHandler)
-		cronjobGroup.PUT("/unlock-seat", services.AutoUnlockSeatsHandler)
-		cronjobGroup.PUT("/close-showtime", services.AutoCloseShowtimesHandler)
+		// cronjobGroup.POST("/update-movie-status", middleware.RequireLogin, controllers.GetFoodsOfBranch)
+		cronjobGroup.POST("/update-movie-status", services.DailyUpdateMoviesHandler)
+		cronjobGroup.POST("/unlock-seat", services.AutoUnlockSeatsHandler)
+		cronjobGroup.POST("/close-showtime", services.AutoCloseShowtimesHandler)
 	}
 }
