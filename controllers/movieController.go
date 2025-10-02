@@ -14,15 +14,53 @@ import (
 
 func GetAllMovies(c *gin.Context) {
 	var movies []models.Movie
+	var total int64
 
-	// Query all movies from the database
-	if err := database.DB.Find(&movies).Error; err != nil {
+	// Lấy query params
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "7")
+	searchQuery := c.DefaultQuery("query", "")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 {
+		limit = 10
+	}
+
+	offset := (page - 1) * limit
+
+	dbQuery := database.DB.Model(&models.Movie{})
+
+	// Nếu có search query, lọc theo tên phim
+	if searchQuery != "" {
+		dbQuery = dbQuery.Where("MovieName LIKE ?", "%"+searchQuery+"%")
+	}
+
+	// Đếm tổng số bản ghi (cho pagination)
+	if err := dbQuery.Count(&total).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count movies"})
+		return
+	}
+
+	// Lấy dữ liệu với phân trang
+	if err := dbQuery.Offset(offset).Limit(limit).Find(&movies).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch movies"})
 		return
 	}
 
-	// Return the list of movies
-	c.JSON(http.StatusOK, gin.H{"movies": movies})
+	// Trả dữ liệu kèm pagination info
+	c.JSON(http.StatusOK, gin.H{
+		"movies": movies,
+		"pagination": gin.H{
+			"total": total,
+			"page":  page,
+			"limit": limit,
+		},
+	})
 }
 
 func GetMoviesInAddShowtime(c *gin.Context) {

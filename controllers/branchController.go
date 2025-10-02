@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"errors"
+	"log"
 	"movie-ticket-booking/database"
 	"movie-ticket-booking/models"
+	"movie-ticket-booking/services"
 	"net/http"
 	"time"
 
@@ -45,70 +47,114 @@ func GetDetailsBranch(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": branch})
 }
 
-// AddBranch handles creating a new branch
 func AddBranch(c *gin.Context) {
-	// Xử lý upload file
+	// Lấy file ảnh từ form
 	imageFile, err := c.FormFile("ImageURL")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File ảnh không hợp lệ hoặc chưa được gửi lên"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ảnh là bắt buộc"})
 		return
 	}
 
-	filePath := "upload/" + imageFile.Filename
-	if err := c.SaveUploadedFile(imageFile, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Lưu file poster thất bại"})
+	imageURL, err := services.UploadToCloudinary(imageFile, "branches")
+	if err != nil {
+		log.Println("Upload Cloudinary error:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload ảnh thất bại"})
 		return
 	}
 
+	if imageURL == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload ảnh thất bại, URL rỗng"})
+		return
+	}
+
+	// Tạo branch mới
 	branch := models.Branch{
-		BranchName:    c.Request.FormValue("BranchName"),
-		Slug:          c.Request.FormValue("Slug"),
-		Email:         c.Request.FormValue("Email"),
-		Address:       c.Request.FormValue("Address"),
-		PhoneNumber:   c.Request.FormValue("PhoneNumber"),
-		ImageURL:      filePath,
-		City:          c.Request.FormValue("City"),
-		CreatedBy:     c.Request.FormValue("CreatedBy"),
-		LastUpdatedBy: c.Request.FormValue("LastUpdatedBy"),
+		BranchName:    c.PostForm("BranchName"),
+		Slug:          c.PostForm("Slug"),
+		Email:         c.PostForm("Email"),
+		Address:       c.PostForm("Address"),
+		PhoneNumber:   c.PostForm("PhoneNumber"),
+		ImageURL:      imageURL,
+		City:          c.PostForm("City"),
+		CreatedBy:     c.PostForm("CreatedBy"),
+		LastUpdatedBy: c.PostForm("LastUpdatedBy"),
 	}
 
+	// Lưu vào database
 	if err := database.DB.Create(&branch).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Tạo branch thất bại"})
 		return
 	}
 
-	// Return success response
-	c.JSON(http.StatusCreated, gin.H{"data": branch})
+	c.JSON(http.StatusCreated, gin.H{"message": "Branch added successfully", "data": branch})
 }
 
-// UpdateBranch handles updating an existing branch
 func UpdateBranch(c *gin.Context) {
 	var branch models.Branch
 
-	// Get BranchID from URL parameters
+	// Lấy BranchID từ URL
 	BranchID := c.Param("BranchID")
 
-	// Find the branch by ID
+	// Tìm branch theo ID
 	if err := database.DB.First(&branch, BranchID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Branch not found"})
 		return
 	}
 
-	// Bind incoming JSON to the Branch struct
-	if err := c.ShouldBindJSON(&branch); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	// Bind dữ liệu từ form (không bind trực tiếp vào branch cũ để tránh ghi đè ID)
+	branchName := c.PostForm("BranchName")
+	slug := c.PostForm("Slug")
+	email := c.PostForm("Email")
+	address := c.PostForm("Address")
+	phoneNumber := c.PostForm("PhoneNumber")
+	city := c.PostForm("City")
+	lastUpdatedBy := c.PostForm("LastUpdatedBy")
+
+	// Cập nhật các trường (nếu có)
+	if branchName != "" {
+		branch.BranchName = branchName
+	}
+	if slug != "" {
+		branch.Slug = slug
+	}
+	if email != "" {
+		branch.Email = email
+	}
+	if address != "" {
+		branch.Address = address
+	}
+	if phoneNumber != "" {
+		branch.PhoneNumber = phoneNumber
+	}
+	if city != "" {
+		branch.City = city
+	}
+	if lastUpdatedBy != "" {
+		branch.LastUpdatedBy = lastUpdatedBy
 	}
 
-	// Update LastModified timestamp
+	// Kiểm tra có file ảnh mới không
+	imageFile, err := c.FormFile("ImageURL")
+	if err == nil && imageFile != nil {
+		imageURL, err := services.UploadToCloudinary(imageFile, "branches")
+		if err != nil {
+			log.Println("Upload Cloudinary error:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload ảnh thất bại"})
+			return
+		}
+		if imageURL != "" {
+			branch.ImageURL = imageURL
+		}
+	}
+
+	// Cập nhật LastUpdatedAt
 	branch.LastUpdatedAt = time.Now()
 
-	// Save changes to the database
+	// Lưu vào database
 	if err := database.DB.Save(&branch).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update branch"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cập nhật branch thất bại"})
 		return
 	}
 
-	// Return success response
-	c.JSON(http.StatusOK, gin.H{"data": branch})
+	c.JSON(http.StatusOK, gin.H{"message": "Branch updated successfully", "data": branch})
 }

@@ -13,6 +13,6 @@ func BranchRoutes(router *gin.Engine) {
 		branchGroup.GET("/get-all-branch", controllers.GetAllBranch)
 		branchGroup.GET("/get-details-branch/:BranchID", controllers.GetDetailsBranch)
 		branchGroup.POST("/add-branch", middleware.RequireLogin, controllers.AddBranch)
-		branchGroup.PUT("/update-branch/:BranchID", controllers.UpdateBranch)
+		branchGroup.PUT("/update-branch/:BranchID", middleware.RequireLogin, controllers.UpdateBranch)
 	}
 }
