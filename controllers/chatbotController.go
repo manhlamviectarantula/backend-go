@@ -55,8 +55,8 @@ func ChatClassicHandler(c *gin.Context) {
 				"Lịch sử giao dịch?",
 				"Diễn viên nổi bật?",
 				"Đạo diễn nổi bật?",
-				"Thông tin khuyến mãi?",
-				"Blog điện ảnh?",
+				// "Thông tin khuyến mãi?",
+				// "Blog điện ảnh?",
 			},
 		})
 		return
@@ -106,13 +106,13 @@ func ChatClassicHandler(c *gin.Context) {
 			},
 		})
 
-	case "Thông tin khuyến mãi?":
-		c.JSON(http.StatusOK, gin.H{
-			"reply": "🔥 Các khuyến mãi hấp dẫn: \n- BACK TO SCHOOL \n- CHỤP ẢNH CÙNG PUI PUI \n- QUÀ TẶNG SINH NHẬT \n- Xem Phim Ngày Đôi \nTHIÊN LONG x DEMON SLAYER",
-			"buttons": []map[string]string{
-				{"label": "Xem chi tiết ➜", "url": "https://www.cgv.vn/default/newsoffer"},
-			},
-		})
+	// case "Thông tin khuyến mãi?":
+	// 	c.JSON(http.StatusOK, gin.H{
+	// 		"reply": "🔥 Các khuyến mãi hấp dẫn: \n- BACK TO SCHOOL \n- CHỤP ẢNH CÙNG PUI PUI \n- QUÀ TẶNG SINH NHẬT \n- Xem Phim Ngày Đôi \nTHIÊN LONG x DEMON SLAYER",
+	// 		"buttons": []map[string]string{
+	// 			{"label": "Xem chi tiết ➜", "url": "https://www.cgv.vn/default/newsoffer"},
+	// 		},
+	// 	})
 
 	case "Lịch sử giao dịch?":
 		c.JSON(http.StatusOK, gin.H{
@@ -134,7 +134,7 @@ func ChatClassicHandler(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"reply": "🧝‍♂️ Diễn viên nổi bật hiện tại: \n- Chris Evans \n- Margot Robbie \n- Charlize Theron \n- Hugh Jackman \n- Robert Downey Jr. \n- Johnny Depp",
 			"buttons": []map[string]string{
-				{"label": "Xem chi tiết ➜", "url": "https://www.galaxycine.vn/dien-vien/"},
+				{"label": "Xem chi tiết ➜", "url": "/actor"},
 			},
 		})
 
@@ -142,17 +142,17 @@ func ChatClassicHandler(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"reply": "🤵 Đạo diễn nổi bật hiện tại: \n- James Wan \n- Lê Bảo Trung \n- Đồng Đăng Giao \n- Khiếu Thú Dịch Tiểu Tinh",
 			"buttons": []map[string]string{
-				{"label": "Xem chi tiết ➜", "url": "https://www.galaxycine.vn/dao-dien/"},
+				{"label": "Xem chi tiết ➜", "url": "/director"},
 			},
 		})
 
-	case "Blog điện ảnh?":
-		c.JSON(http.StatusOK, gin.H{
-			"reply": "📰 Tin tức hot hiện tại:",
-			"buttons": []map[string]string{
-				{"label": "Xem chi tiết ➜", "url": "https://www.galaxycine.vn/movie-blog/"},
-			},
-		})
+	// case "Blog điện ảnh?":
+	// 	c.JSON(http.StatusOK, gin.H{
+	// 		"reply": "📰 Tin tức hot hiện tại:",
+	// 		"buttons": []map[string]string{
+	// 			{"label": "Xem chi tiết ➜", "url": "https://www.galaxycine.vn/movie-blog/"},
+	// 		},
+	// 	})
 
 	default:
 		c.JSON(http.StatusOK, gin.H{
