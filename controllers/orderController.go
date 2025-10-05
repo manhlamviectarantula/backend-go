@@ -222,6 +222,26 @@ func CreateMomoPayment(c *gin.Context) {
 		return
 	}
 
+	// ✅ Kiểm tra suất chiếu còn hợp lệ không
+	var showtime models.Showtime
+	if err := database.DB.First(&showtime, request.Order.ShowtimeID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy suất chiếu"})
+		return
+	}
+
+	layout := "2006-01-02 15:04:05"
+	showtimeStartStr := fmt.Sprintf("%s %s", showtime.ShowDate, showtime.StartTime)
+	showtimeStartTime, err := time.ParseInLocation(layout, showtimeStartStr, time.Local)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Định dạng ngày/giờ suất chiếu không hợp lệ"})
+		return
+	}
+
+	if !time.Now().Before(showtimeStartTime) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Suất chiếu đã đóng đặt vé"})
+		return
+	}
+
 	// -- Encode request data into extraData --
 	rawData, _ := json.Marshal(request)
 	extraData := base64.StdEncoding.EncodeToString(rawData)
