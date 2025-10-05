@@ -25,24 +25,44 @@ func GetAllShowtimesOfDate(c *gin.Context) {
 
 	var rows []ShowtimeRow
 
-	err := database.DB.Raw(`
-        SELECT 
-            b.BranchName,
-            s.ShowtimeID,
-            s.StartTime
-        FROM showtimes s
-        JOIN theaters t ON s.TheaterID = t.TheaterID
-        JOIN branches b ON t.BranchID = b.BranchID
-        WHERE s.MovieID = ? 
-          AND DATE(s.ShowDate) = ? 
-          AND s.IsOpenOrder = 1
-		  AND s.Status = 1
-        ORDER BY b.BranchName, s.StartTime
-    `, MovieID, Date).Scan(&rows).Error
+	currentDate := time.Now().Format("2006-01-02")
+	currentTime := time.Now().Format("15:04:05")
 
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve showtimes"})
-		return
+	query := `
+		SELECT 
+			b.BranchName,
+			s.ShowtimeID,
+			s.StartTime
+		FROM showtimes s
+		JOIN theaters t ON s.TheaterID = t.TheaterID
+		JOIN branches b ON t.BranchID = b.BranchID
+		WHERE s.MovieID = ? 
+		  AND DATE(s.ShowDate) = ? 
+		  AND s.IsOpenOrder = 1
+		  AND s.Status = 1
+	`
+
+	// Nếu là ngày hiện tại thì lọc thêm theo giờ
+	if Date == currentDate {
+		query += " AND s.StartTime > ?"
+		err := database.DB.Raw(query+`
+			ORDER BY b.BranchName, s.StartTime
+		`, MovieID, Date, currentTime).Scan(&rows).Error
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve showtimes"})
+			return
+		}
+	} else {
+		// Nếu là ngày khác thì không cần lọc theo giờ
+		err := database.DB.Raw(query+`
+			ORDER BY b.BranchName, s.StartTime
+		`, MovieID, Date).Scan(&rows).Error
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve showtimes"})
+			return
+		}
 	}
 
 	if len(rows) == 0 {
@@ -62,7 +82,6 @@ func GetAllShowtimesOfDate(c *gin.Context) {
 	var result []BranchGroup
 
 	for _, r := range rows {
-		// tìm branch đã có trong result
 		found := false
 		for i := range result {
 			if result[i].BranchName == r.BranchName {
@@ -74,7 +93,6 @@ func GetAllShowtimesOfDate(c *gin.Context) {
 				break
 			}
 		}
-		// nếu chưa có thì thêm mới
 		if !found {
 			result = append(result, BranchGroup{
 				BranchName: r.BranchName,

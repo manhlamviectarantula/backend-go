@@ -229,7 +229,7 @@ func CreateMomoPayment(c *gin.Context) {
 		return
 	}
 
-	layout := "2006-01-02 15:04:05"
+	layout := "2006-01-02 15:04"
 	showtimeStartStr := fmt.Sprintf("%s %s", showtime.ShowDate, showtime.StartTime)
 	showtimeStartTime, err := time.ParseInLocation(layout, showtimeStartStr, time.Local)
 	if err != nil {
