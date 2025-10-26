@@ -147,6 +147,7 @@ func LoginUser(c *gin.Context) {
 		PhoneNumber   string    `json:"PhoneNumber"`
 		FullName      string    `json:"FullName"`
 		BirthDate     string    `json:"BirthDate"`
+		Point         int       `json:"Point"`
 		Status        bool      `json:"Status"`
 		FromFacebook  bool      `json:"FromFacebook"`
 		CreatedAt     time.Time `json:"CreatedAt"`
@@ -162,6 +163,7 @@ func LoginUser(c *gin.Context) {
 		PhoneNumber:   user.PhoneNumber,
 		FullName:      user.FullName,
 		BirthDate:     user.BirthDate,
+		Point:         user.Point,
 		Status:        user.Status,
 		FromFacebook:  user.FromFacebook,
 		CreatedAt:     user.CreatedAt,
@@ -252,7 +254,7 @@ func FacebookCallback(c *gin.Context) {
 		return
 	}
 
-	frontendURL := os.Getenv("FE_REACTJS")
+	frontendURL := os.Getenv("FE_REACTJS") + "/oauth-callback"
 
 	// Kiểm tra tài khoản đã tồn tại chưa
 	var user models.Account
@@ -261,9 +263,10 @@ func FacebookCallback(c *gin.Context) {
 		user = models.Account{
 			Email:         fbUser.Email,
 			FullName:      fbUser.Name,
-			Password:      "", // không cần mật khẩu cho tài khoản Facebook
+			Password:      "",
 			AccountTypeID: 1,
-			Status:        true,
+			Point:         0,    // hoặc số điểm khởi tạo mong muốn
+			Status:        true, // bật trạng thái mặc định
 			FromFacebook:  true,
 			CreatedAt:     time.Now(),
 			LastUpdatedAt: time.Now(),
@@ -311,15 +314,17 @@ func FacebookCallback(c *gin.Context) {
 	}
 
 	redirectURL := fmt.Sprintf(
-		"%s?token=%s&accountID=%d&accountTypeID=%d&email=%s&fullName=%s&fromFacebook=%t",
+		"%s?token=%s&accountID=%d&accountTypeID=%d&point=%d&email=%s&fullName=%s&fromFacebook=%t",
 		frontendURL,
 		url.QueryEscape(tokenString),
 		user.AccountID,
 		user.AccountTypeID,
+		user.Point,
 		url.QueryEscape(user.Email),
 		url.QueryEscape(user.FullName),
 		user.FromFacebook,
 	)
+	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 
 	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 }
@@ -378,7 +383,8 @@ func GoogleCallback(c *gin.Context) {
 			FullName:      googleUser.Name,
 			Password:      "", // Google không cần mật khẩu
 			AccountTypeID: 1,
-			Status:        true,
+			Point:         user.Point,
+			Status:        user.Status,
 			FromGoogle:    true,
 			CreatedAt:     time.Now(),
 			LastUpdatedAt: time.Now(),

@@ -14,6 +14,10 @@ func TheaterRoutes(router *gin.Engine) {
 		theaterGroup.GET("/get-details-theater/:TheaterID", middleware.RequireLogin, controllers.GetDetailsTheater)
 		theaterGroup.GET("/get-seats-of-theater/:TheaterID", middleware.RequireLogin, controllers.GetSeatsOfTheater)
 		theaterGroup.POST("/add-theater", middleware.RequireLogin, controllers.AddTheater)
+
+		theaterGroup.PUT("/update-theater/:TheaterID", middleware.RequireLogin, controllers.UpdateTheater)
+		theaterGroup.PUT("/update-seat/:TheaterID", middleware.RequireLogin, controllers.UpdateTheater)
+
 		theaterGroup.PUT("/change-theater-status/:TheaterID", middleware.RequireLogin, controllers.ChangeTheaterStatus)
 	}
 }

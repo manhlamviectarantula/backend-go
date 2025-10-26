@@ -186,6 +186,46 @@ func AddTheater(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": theater})
 }
 
+func UpdateTheater(c *gin.Context) {
+	id := c.Param("TheaterID") // Lấy TheaterID từ URL param
+
+	var theater models.Theater
+	// Kiểm tra xem rạp có tồn tại không
+	if err := database.DB.First(&theater, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Theater not found"})
+		return
+	}
+
+	// Parse dữ liệu JSON từ request body
+	var updatedData models.Theater
+	if err := c.ShouldBindJSON(&updatedData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Cập nhật các trường được cho phép
+	theater.BranchID = updatedData.BranchID
+	theater.TheaterName = updatedData.TheaterName
+	theater.Slug = updatedData.Slug
+	theater.TheaterType = updatedData.TheaterType
+	theater.MaxRow = updatedData.MaxRow
+	theater.MaxColumn = updatedData.MaxColumn
+	theater.Status = updatedData.Status
+	theater.LastUpdatedBy = updatedData.LastUpdatedBy
+	theater.LastUpdatedAt = time.Now()
+
+	// Cập nhật dữ liệu trong database
+	if err := database.DB.Save(&theater).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update theater"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Theater updated successfully",
+		"data":    theater,
+	})
+}
+
 func ChangeTheaterStatus(c *gin.Context) {
 	// Lấy TheaterID từ param
 	theaterID := c.Param("TheaterID")
