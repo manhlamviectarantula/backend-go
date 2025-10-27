@@ -183,7 +183,7 @@ func GetMovieOverall(c *gin.Context) {
              FROM showtime_seats ss
              JOIN showtimes st ON ss.ShowtimeID = st.ShowtimeID
              JOIN orders o ON ss.OrderID = o.OrderID
-             WHERE st.MovieID = ? AND ss.Status = 1
+             WHERE st.MovieID = ? AND ss.Status = 2
                AND DATE(o.CreatedAt) BETWEEN ? AND ?) sold
         CROSS JOIN
             (SELECT SUM(ss.TicketPrice) AS total_revenue
