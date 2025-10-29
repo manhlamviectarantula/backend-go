@@ -25,8 +25,18 @@ func GetAllShowtimesOfDate(c *gin.Context) {
 
 	var rows []ShowtimeRow
 
-	currentDate := time.Now().Format("2006-01-02")
-	currentTime := time.Now().Format("15:04:05")
+	loc, err := time.LoadLocation("Asia/Bangkok")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load timezone"})
+		return
+	}
+
+	now := time.Now().In(loc)
+	currentDate := now.Format("2006-01-02")
+	currentTime := now.Format("15:04:05")
+
+	// currentDate := time.Now().Format("2006-01-02")
+	// currentTime := time.Now().Format("15:04:05")
 
 	query := `
 		SELECT 
