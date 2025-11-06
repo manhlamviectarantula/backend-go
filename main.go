@@ -57,4 +57,6 @@ func main() {
 	port := config.GetEnv("PORT", "8080")
 	log.Println("✅ Server đang chạy tại cổng " + port + "...")
 	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, router))
+
+	// rebuild
 }
