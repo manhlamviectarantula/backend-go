@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func GetAllTheaterOfBranch(c *gin.Context) {
@@ -43,7 +44,7 @@ func GetDetailsTheater(c *gin.Context) {
 }
 
 func GetSeatsOfTheater(c *gin.Context) {
-	theaterID := c.Param("TheaterID") // Lấy TheaterID từ URL parameter
+	theaterID := c.Param("TheaterID")
 	if theaterID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing TheaterID"})
 		return
@@ -76,18 +77,14 @@ func GetSeatsOfTheater(c *gin.Context) {
 		Description string `json:"Description"`
 	}
 
-	// Sửa lại truy vấn để thay thế showtimeID bằng theaterID và lấy từ tham số URL
+	// Chỉ lấy rows và seats có isOld = 0
 	err := database.DB.Raw(`
-    SELECT *
-    FROM seats
-    WHERE RowID IN (
-        SELECT RowID 
-        FROM `+"`rows`"+`
-        WHERE TheaterID = ?
-    )
-    ORDER BY RowID DESC, `+"`Column`"+` ASC
-`, theaterID).Scan(&seatData).Error
-
+		SELECT s.*
+		FROM seats s
+		JOIN `+"`rows`"+` r ON s.RowID = r.RowID
+		WHERE r.TheaterID = ? AND r.isOld = 0 AND s.isOld = 0
+		ORDER BY r.RowID DESC, s.Column ASC
+	`, theaterID).Scan(&seatData).Error
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -98,11 +95,11 @@ func GetSeatsOfTheater(c *gin.Context) {
 	rowIndexMap := make(map[string]int)
 	rowNames := []string{}
 
-	// Ghi nhận RowName theo thứ tự xuất hiện và tính maxRow
+	// Ghi nhận RowName theo thứ tự xuất hiện và tính maxRow, maxColumn
 	for _, seat := range seatData {
 		if _, exists := rowIndexMap[seat.RowName]; !exists {
 			rowNames = append(rowNames, seat.RowName)
-			rowIndexMap[seat.RowName] = len(rowNames) - 1 // Gán index theo thứ tự xuất hiện
+			rowIndexMap[seat.RowName] = len(rowNames) - 1
 		}
 		if seat.Row > maxRow {
 			maxRow = seat.Row
@@ -113,8 +110,6 @@ func GetSeatsOfTheater(c *gin.Context) {
 	}
 
 	rowMap := make(map[string]*RowData)
-
-	// Tạo RowData theo thứ tự đã ghi nhận
 	for _, seat := range seatData {
 		if _, exists := rowMap[seat.RowName]; !exists {
 			rowMap[seat.RowName] = &RowData{
@@ -141,23 +136,140 @@ func GetSeatsOfTheater(c *gin.Context) {
 	}
 
 	sort.SliceStable(rows, func(i, j int) bool {
-		if rows[i].Name == "A" { // Đưa hàng A xuống cuối
+		if rows[i].Name == "A" {
 			return false
 		}
 		if rows[j].Name == "A" {
 			return true
 		}
-		return rows[i].Name > rows[j].Name // Sắp xếp theo thứ tự giảm dần (Z → B)
+		return rows[i].Name > rows[j].Name
 	})
 
 	result := gin.H{
-		"maxColumn": maxColumn + 1, // Cộng thêm 1 để phản ánh index chính xác
+		"maxColumn": maxColumn + 1,
 		"maxRow":    maxRow,
 		"rows":      rows,
 	}
 
 	c.JSON(http.StatusOK, result)
 }
+
+// func GetSeatsOfTheater(c *gin.Context) {
+// 	theaterID := c.Param("TheaterID") // Lấy TheaterID từ URL parameter
+// 	if theaterID == "" {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing TheaterID"})
+// 		return
+// 	}
+
+// 	type SeatData struct {
+// 		SeatID      int    `json:"SeatID"`
+// 		SeatNumber  int    `json:"SeatNumber"`
+// 		Area        int    `json:"Area"`
+// 		Column      int    `json:"Column"`
+// 		Row         int    `json:"Row"`
+// 		RowName     string `json:"RowName"`
+// 		Description string `json:"Description"`
+// 	}
+
+// 	type RowData struct {
+// 		Index int        `json:"index"`
+// 		Name  string     `json:"name"`
+// 		Seats []SeatData `json:"seats"`
+// 	}
+
+// 	var seatData []struct {
+// 		SeatID      int    `json:"SeatID"`
+// 		RowName     string `json:"RowName"`
+// 		RowID       int    `json:"RowID"`
+// 		SeatNumber  int    `json:"SeatNumber"`
+// 		Area        int    `json:"Area"`
+// 		Column      int    `json:"Column"`
+// 		Row         int    `json:"Row"`
+// 		Description string `json:"Description"`
+// 	}
+
+// 	// Sửa lại truy vấn để thay thế showtimeID bằng theaterID và lấy từ tham số URL
+// 	err := database.DB.Raw(`
+//     SELECT *
+//     FROM seats
+//     WHERE RowID IN (
+//         SELECT RowID
+//         FROM `+"`rows`"+`
+//         WHERE TheaterID = ?
+//     )
+//     ORDER BY RowID DESC, `+"`Column`"+` ASC
+// `, theaterID).Scan(&seatData).Error
+
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+// 		return
+// 	}
+
+// 	maxRow := 0
+// 	maxColumn := 0
+// 	rowIndexMap := make(map[string]int)
+// 	rowNames := []string{}
+
+// 	// Ghi nhận RowName theo thứ tự xuất hiện và tính maxRow
+// 	for _, seat := range seatData {
+// 		if _, exists := rowIndexMap[seat.RowName]; !exists {
+// 			rowNames = append(rowNames, seat.RowName)
+// 			rowIndexMap[seat.RowName] = len(rowNames) - 1 // Gán index theo thứ tự xuất hiện
+// 		}
+// 		if seat.Row > maxRow {
+// 			maxRow = seat.Row
+// 		}
+// 		if seat.Column > maxColumn {
+// 			maxColumn = seat.Column
+// 		}
+// 	}
+
+// 	rowMap := make(map[string]*RowData)
+
+// 	// Tạo RowData theo thứ tự đã ghi nhận
+// 	for _, seat := range seatData {
+// 		if _, exists := rowMap[seat.RowName]; !exists {
+// 			rowMap[seat.RowName] = &RowData{
+// 				Index: rowIndexMap[seat.RowName],
+// 				Name:  seat.RowName,
+// 				Seats: []SeatData{},
+// 			}
+// 		}
+// 		rowMap[seat.RowName].Seats = append(rowMap[seat.RowName].Seats, SeatData{
+// 			SeatID:      seat.SeatID,
+// 			SeatNumber:  seat.SeatNumber,
+// 			Area:        seat.Area,
+// 			Column:      seat.Column,
+// 			Row:         seat.Row,
+// 			RowName:     seat.RowName,
+// 			Description: seat.Description,
+// 		})
+// 	}
+
+// 	// Chuyển map thành danh sách và sắp xếp theo Index
+// 	rows := make([]RowData, 0, len(rowMap))
+// 	for _, row := range rowMap {
+// 		rows = append(rows, *row)
+// 	}
+
+// 	sort.SliceStable(rows, func(i, j int) bool {
+// 		if rows[i].Name == "A" { // Đưa hàng A xuống cuối
+// 			return false
+// 		}
+// 		if rows[j].Name == "A" {
+// 			return true
+// 		}
+// 		return rows[i].Name > rows[j].Name // Sắp xếp theo thứ tự giảm dần (Z → B)
+// 	})
+
+// 	result := gin.H{
+// 		"maxColumn": maxColumn + 1, // Cộng thêm 1 để phản ánh index chính xác
+// 		"maxRow":    maxRow,
+// 		"rows":      rows,
+// 	}
+
+// 	c.JSON(http.StatusOK, result)
+// }
 
 func AddTheater(c *gin.Context) {
 	var theater models.Theater
@@ -210,6 +322,7 @@ func UpdateTheater(c *gin.Context) {
 	theater.TheaterType = updatedData.TheaterType
 	theater.MaxRow = updatedData.MaxRow
 	theater.MaxColumn = updatedData.MaxColumn
+	theater.SeatsPrice = updatedData.SeatsPrice
 	theater.Status = updatedData.Status
 	theater.LastUpdatedBy = updatedData.LastUpdatedBy
 	theater.LastUpdatedAt = time.Now()
@@ -223,6 +336,90 @@ func UpdateTheater(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Theater updated successfully",
 		"data":    theater,
+	})
+}
+
+func UpdateColRow(c *gin.Context) {
+	theaterID := c.Param("TheaterID")
+	if theaterID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing TheaterID"})
+		return
+	}
+
+	// Struct để bind JSON từ request body
+	type UpdateColRowInput struct {
+		MaxRow        int    `json:"MaxRow" binding:"required"`
+		MaxColumn     int    `json:"MaxColumn" binding:"required"`
+		LastUpdatedBy string `json:"LastUpdatedBy"`
+	}
+
+	var input UpdateColRowInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Lấy theater từ DB
+	var theater models.Theater
+	if err := database.DB.First(&theater, "TheaterID = ?", theaterID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Theater not found"})
+		return
+	}
+
+	// Cập nhật số hàng và cột, cũng như người cập nhật
+	theater.MaxRow = input.MaxRow
+	theater.MaxColumn = input.MaxColumn
+	theater.LastUpdatedBy = input.LastUpdatedBy
+
+	if err := database.DB.Save(&theater).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update theater"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Theater updated successfully", "theater": theater})
+}
+
+func MarkRowsAndSeatsOld(c *gin.Context) {
+	// Lấy TheaterID từ param
+	theaterID := c.Param("TheaterID")
+
+	// Kiểm tra theater có tồn tại không
+	var theater models.Theater
+	if err := database.DB.First(&theater, "TheaterID = ?", theaterID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Theater not found"})
+		return
+	}
+
+	// Bắt đầu transaction để cập nhật isOld
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		// 1️⃣ Cập nhật seats thuộc các row của theater này
+		if err := tx.Exec(`
+            UPDATE seats s
+            JOIN `+"`rows`"+` r ON s.RowID = r.RowID
+            SET s.isOld = 1
+            WHERE r.TheaterID = ? AND s.isOld = 0
+        `, theaterID).Error; err != nil {
+			return err
+		}
+
+		// 2️⃣ Cập nhật rows của theater
+		if err := tx.Model(&models.Row{}).
+			Where("TheaterID = ? AND isOld = 0", theaterID).
+			Update("isOld", 1).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark rows and seats as old"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"TheaterID": theater.TheaterID,
+		"message":   "Marked all rows and seats as old successfully",
 	})
 }
 

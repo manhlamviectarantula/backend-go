@@ -9,4 +9,5 @@ type Seat struct {
 	Column      int    `gorm:"not null;column:Column"`
 	Row         int    `gorm:"not null;column:Row"`
 	Description string `gorm:"type:text;column:Description"`
+	isOld       bool   `gorm:"column:IsOld;not null;default:false"`
 }

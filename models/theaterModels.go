@@ -10,7 +10,8 @@ type Theater struct {
 	TheaterType   string    `gorm:"size:10;not null;column:TheaterType"`
 	MaxRow        int       `gorm:"not null;column:MaxRow"`
 	MaxColumn     int       `gorm:"not null;column:MaxColumn"`
-	Status        bool      `gorm:"not null;default:true;column:Status"` // ← thêm trường Status
+	SeatsPrice    int       `gorm:"not null;default:50000;column:SeatsPrice"`
+	Status        bool      `gorm:"not null;default:true;column:Status"`
 	CreatedAt     time.Time `gorm:"autoCreateTime;column:CreatedAt"`
 	LastUpdatedAt time.Time `gorm:"autoUpdateTime;column:LastUpdatedAt"`
 	CreatedBy     string    `gorm:"size:100;not null;column:CreatedBy"`

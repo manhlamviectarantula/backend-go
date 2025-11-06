@@ -130,6 +130,32 @@ func GetSeatOfShowtime(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+// func AddShowtimeSeats(c *gin.Context) {
+// 	showtimeID := c.Param("ShowtimeID")
+// 	theaterID := c.Param("TheaterID")
+
+// 	if showtimeID == "" || theaterID == "" {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing ShowtimeID or TheaterID"})
+// 		return
+// 	}
+
+// 	query := `
+// 		INSERT INTO showtime_seats (ShowtimeID, SeatID, RowName, Status, TicketPrice)
+// 		SELECT ?, s.SeatID, r.RowName, 0, t.SeatsPrice
+// 		FROM seats s
+// 		JOIN ` + "`rows`" + ` r ON s.RowID = r.RowID
+// 		JOIN theaters t ON t.TheaterID = r.TheaterID
+// 		WHERE r.TheaterID = ?;
+// 	`
+
+// 	if err := database.DB.Exec(query, showtimeID, theaterID).Error; err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+// 		return
+// 	}
+
+// 	c.JSON(http.StatusOK, gin.H{"message": "Showtime seats added successfully"})
+// }
+
 func AddShowtimeSeats(c *gin.Context) {
 	showtimeID := c.Param("ShowtimeID")
 	theaterID := c.Param("TheaterID")
@@ -139,13 +165,15 @@ func AddShowtimeSeats(c *gin.Context) {
 		return
 	}
 
-	// Chạy truy vấn INSERT
 	query := `
 		INSERT INTO showtime_seats (ShowtimeID, SeatID, RowName, Status, TicketPrice)
-		SELECT ?, s.SeatID, r.RowName, 0, 50000
+		SELECT ?, s.SeatID, r.RowName, 0, t.SeatsPrice
 		FROM seats s
 		JOIN ` + "`rows`" + ` r ON s.RowID = r.RowID
-		WHERE r.TheaterID = ?;
+		JOIN theaters t ON t.TheaterID = r.TheaterID
+		WHERE r.TheaterID = ?
+		  AND s.isOld = 0
+		  AND r.isOld = 0;
 	`
 
 	if err := database.DB.Exec(query, showtimeID, theaterID).Error; err != nil {
